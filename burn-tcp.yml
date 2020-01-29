@@ -1,0 +1,159 @@
+# client ->(HTTP/1.1)->
+#   server1
+#   server2
+#   ...
+#   serverN
+#
+
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: burn-tcp
+  annotations:
+    linkerd.io/inject: enabled
+    config.linkerd.io/proxy-log-level: linkerd=debug,warn
+    config.linkerd.io/proxy-version: ver-2020-01-29.0
+
+#
+# client
+#
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: client
+  namespace: burn-tcp
+  labels:
+    app: client
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: client
+  name: client-serial
+  namespace: burn-tcp
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      serviceAccount: client
+      containers:
+      - image: buoyantio/bb:v0.0.5
+        name: client
+        ports:
+        - name: client
+          containerPort: 9990
+        command:
+        - "/bin/sh"
+        args:
+        - "-c"
+        - |
+          set -eux
+          apt-get install -y netcat
+          while true ; do
+            for i in $(seq 10000) ; do
+              data=$(tr -dc A-Za-z0-9 </dev/urandom |dd bs=200 count=1 2>/dev/null)
+              echo "$data" | nc -v server 5201
+            done
+            sleep 60
+          done
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: client
+  name: client-burst
+  namespace: burn-tcp
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      serviceAccount: client
+      containers:
+      - image: buoyantio/bb:v0.0.5
+        name: client
+        ports:
+        - name: client
+          containerPort: 9990
+        command:
+        - "/bin/sh"
+        args:
+        - "-c"
+        - |
+          set -eux
+          apt-get install -y netcat
+          while true ; do
+            for i in $(seq 100) ; do
+              for i in $(seq 100) ; do
+                (
+                  data=$(tr -dc A-Za-z0-9 </dev/urandom |dd bs=200 count=1 2>/dev/null)
+                  echo "$data" | nc -v server 5201
+                )&
+              done
+              while fg ; do :; done 2>/dev/null
+            done
+            sleep 60
+          done
+
+#
+# server
+#
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: server
+  name: server
+  namespace: burn-tcp
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: server
+    spec:
+      serviceAccount: server
+      containers:
+      - image: networkstatic/iperf3
+        name: iperf
+        args:
+        - "-s"
+        ports:
+        - containerPort: 5201
+          name: tcp
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: server
+  namespace: burn-tcp
+  labels:
+    app: server
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: server
+  namespace: burn-tcp
+  labels:
+    app: server
+spec:
+  selector:
+    app: server
+  ports:
+  - port: 5201
+    name: tcp
+
