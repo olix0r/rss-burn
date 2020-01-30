@@ -13,7 +13,7 @@ metadata:
   annotations:
     linkerd.io/inject: enabled
     config.linkerd.io/proxy-log-level: linkerd=debug,warn
-    config.linkerd.io/proxy-version: ver-2020-01-29.0
+    #config.linkerd.io/proxy-version: ver-2020-01-29.0
 
 #
 # client
@@ -58,8 +58,7 @@ spec:
           i=0
           while true ; do
             for i in $(seq 10000) ; do
-              data=$(tr -dc A-Za-z0-9 </dev/urandom |dd bs=200 count=1 2>/dev/null)
-              curl -X POST -d "$data" -m 10 -so /dev/null "http://server/#$i" &
+              curl -X GET -m 10 -so /dev/null "http://server/#$i" &
               i=$((i+1))
             done
             sleep 60
@@ -97,8 +96,7 @@ spec:
           while true ; do
             for i in $(seq 100) ; do
               for i in $(seq 100) ; do
-                data=$(tr -dc A-Za-z0-9 </dev/urandom |dd bs=200 count=1 2>/dev/null)
-                curl -X POST -d "$data" -m 10 -so /dev/null "http://server/#$i" &
+                curl -X GET -m 10 -so /dev/null "http://server/#$i" &
               done
               while fg ; do :; done 2>/dev/null
             done
@@ -133,8 +131,7 @@ spec:
         args:
         - "-c"
         - |
-          data=$(tr -dc A-Za-z0-9 </dev/urandom |dd bs=20000 count=1 2>/dev/null)
-          /out/bb terminus --h1-server-port=7070 --response-text="$data"
+          /out/bb terminus --h1-server-port=7070 --response-text=""
         ports:
         - containerPort: 7070
           name: http

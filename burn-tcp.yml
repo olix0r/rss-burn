@@ -13,7 +13,7 @@ metadata:
   annotations:
     linkerd.io/inject: enabled
     config.linkerd.io/proxy-log-level: linkerd=debug,warn
-    config.linkerd.io/proxy-version: ver-2020-01-29.0
+    #config.linkerd.io/proxy-version: ver-2020-01-29.0
 
 #
 # client
@@ -58,8 +58,7 @@ spec:
           apt-get install -y netcat
           while true ; do
             for i in $(seq 10000) ; do
-              data=$(tr -dc A-Za-z0-9 </dev/urandom |dd bs=200 count=1 2>/dev/null)
-              echo "$data" | nc -v server 5201
+              echo "!" | nc -v server 5201
             done
             sleep 60
           done
@@ -97,8 +96,7 @@ spec:
             for i in $(seq 100) ; do
               for i in $(seq 100) ; do
                 (
-                  data=$(tr -dc A-Za-z0-9 </dev/urandom |dd bs=200 count=1 2>/dev/null)
-                  echo "$data" | nc -v server 5201
+                  echo "1" | nc -v server 5201
                 )&
               done
               while fg ; do :; done 2>/dev/null
