@@ -12,8 +12,8 @@ metadata:
   name: burn-http
   annotations:
     linkerd.io/inject: enabled
-    config.linkerd.io/proxy-log-level: linkerd=debug,warn
-    #config.linkerd.io/proxy-version: ver-2020-01-29.0
+    config.linkerd.io/proxy-log-level: linkerd=info,warn
+    config.linkerd.io/proxy-version: ver-slab-patch-2020-01-31.1
 
 #
 # client
