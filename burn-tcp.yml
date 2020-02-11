@@ -12,8 +12,8 @@ metadata:
   name: burn-tcp
   annotations:
     linkerd.io/inject: enabled
-    config.linkerd.io/proxy-log-level: linkerd=debug,warn
-    #config.linkerd.io/proxy-version: ver-2020-01-29.0
+    config.linkerd.io/proxy-log-level: linkerd=info,warn
+    config.linkerd.io/proxy-version: ver-slab-patch-2020-01-31.1
 
 #
 # client
@@ -55,11 +55,10 @@ spec:
         - "-c"
         - |
           set -eux
-          apt-get install -y netcat
+          apt-get install -y netcat-openbsd
           while true ; do
             for i in $(seq 10000) ; do
-              data=$(tr -dc A-Za-z0-9 </dev/urandom |dd bs=200 count=1 2>/dev/null)
-              echo "$data" | nc -v server 5201
+              echo "serial" | nc -vq 0 server 5001
             done
             sleep 60
           done
@@ -92,13 +91,12 @@ spec:
         - "-c"
         - |
           set -eux
-          apt-get install -y netcat
+          apt-get install -y netcat-openbsd
           while true ; do
             for i in $(seq 100) ; do
               for i in $(seq 100) ; do
                 (
-                  data=$(tr -dc A-Za-z0-9 </dev/urandom |dd bs=200 count=1 2>/dev/null)
-                  echo "$data" | nc -v server 5201
+                  echo "burst" | nc -vq 0 server 5001
                 )&
               done
               while fg ; do :; done 2>/dev/null
@@ -127,12 +125,18 @@ spec:
     spec:
       serviceAccount: server
       containers:
-      - image: networkstatic/iperf3
+      - image: buoyantio/bb:v0.0.5
         name: iperf
+        command:
+        - "/bin/sh"
         args:
-        - "-s"
+        - "-c"
+        - |
+          set -eux
+          apt-get install -y iperf
+          iperf -s
         ports:
-        - containerPort: 5201
+        - containerPort: 5001
           name: tcp
 ---
 kind: ServiceAccount
@@ -154,6 +158,6 @@ spec:
   selector:
     app: server
   ports:
-  - port: 5201
+  - port: 5001
     name: tcp
 
