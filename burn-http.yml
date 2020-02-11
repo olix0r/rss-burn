@@ -11,9 +11,9 @@ apiVersion: v1
 metadata:
   name: burn-http
   annotations:
-    linkerd.io/inject: enabled
     config.linkerd.io/proxy-log-level: linkerd=info,warn
-    config.linkerd.io/proxy-version: ver-slab-patch-2020-01-31.1
+    config.linkerd.io/proxy-version: ver-backpressure-profilee-2020-02-05.0
+    linkerd.io/inject: enabled
 
 #
 # client
@@ -57,11 +57,11 @@ spec:
           set -eu
           i=0
           while true ; do
-            for i in $(seq 10000) ; do
+            for i in $(seq 1000) ; do
               curl -X GET -m 10 -so /dev/null "http://server/#$i" &
               i=$((i+1))
             done
-            sleep 60
+            sleep 10
           done
 
 
@@ -103,6 +103,81 @@ spec:
             sleep 60
           done
 
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: client
+  name: client-empty
+  namespace: burn-http
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      serviceAccount: client
+      containers:
+      - image: buoyantio/bb:v0.0.5
+        name: client
+        ports:
+        - name: client
+          containerPort: 9990
+        command:
+        - "/bin/sh"
+        args:
+        - "-c"
+        - |
+          set -eu
+          i=0
+          while true ; do
+            for i in $(seq 1000) ; do
+              curl -X GET -m 10 -so /dev/null "http://empty/#$i" &
+              i=$((i+1))
+            done
+            sleep 10
+          done
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: client
+  name: client-unbound
+  namespace: burn-http
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      serviceAccount: client
+      containers:
+      - image: buoyantio/bb:v0.0.5
+        name: client
+        ports:
+        - name: client
+          containerPort: 9990
+        command:
+        - "/bin/sh"
+        args:
+        - "-c"
+        - |
+          set -eu
+          i=0
+          while true ; do
+            for i in $(seq 1000) ; do
+              curl -X GET -m 10 -so /dev/null "http://unbound/#$i" &
+              i=$((i+1))
+            done
+            sleep 10
+          done
+
+
 #
 # server
 #
@@ -135,6 +210,8 @@ spec:
         ports:
         - containerPort: 7070
           name: http
+        - containerPort: 7711
+          name: unbound
 
 ---
 kind: ServiceAccount
@@ -159,4 +236,35 @@ spec:
   - port: 80
     targetPort: http
     name: http
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: unbound
+  namespace: burn-http
+  labels:
+    app: server
+spec:
+  selector:
+    app: server
+  ports:
+  - port: 80
+    targetPort: unbound
+    name: http
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: empty
+  namespace: burn-http
+  labels:
+    app: server
+spec:
+  selector:
+    app: empty
+  ports:
+  - port: 80
+    targetPort: http
+    name: http
+
 
