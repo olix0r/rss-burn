@@ -12,7 +12,7 @@ metadata:
   name: burn-http
   annotations:
     config.linkerd.io/proxy-log-level: linkerd=info,warn
-    config.linkerd.io/proxy-version: ver-backpressure-profilee-2020-02-05.0
+    config.linkerd.io/proxy-version: ver-backpressure-debug-lock-2020-02-11.0
     linkerd.io/inject: enabled
 
 #
@@ -44,26 +44,10 @@ spec:
     spec:
       serviceAccount: client
       containers:
-      - image: buoyantio/bb:v0.0.5
+      - image: buoyantio/slow_cooker:latest
         name: client
-        ports:
-        - name: client
-          containerPort: 9990
-        command:
-        - "/bin/sh"
         args:
-        - "-c"
-        - |
-          set -eu
-          i=0
-          while true ; do
-            for i in $(seq 1000) ; do
-              curl -X GET -m 10 -so /dev/null "http://server/#$i" &
-              i=$((i+1))
-            done
-            sleep 10
-          done
-
+        - http://server/
 
 ---
 apiVersion: extensions/v1beta1
@@ -82,26 +66,12 @@ spec:
     spec:
       serviceAccount: client
       containers:
-      - image: buoyantio/bb:v0.0.5
+      - image: buoyantio/slow_cooker:latest
         name: client
-        ports:
-        - name: client
-          containerPort: 9990
-        command:
-        - "/bin/sh"
         args:
-        - "-c"
-        - |
-          set -eux
-          while true ; do
-            for i in $(seq 100) ; do
-              for i in $(seq 100) ; do
-                curl -X GET -m 10 -so /dev/null "http://server/#$i" &
-              done
-              while fg ; do :; done 2>/dev/null
-            done
-            sleep 60
-          done
+        - -concurrency
+        - 100
+        - http://server/
 
 ---
 apiVersion: extensions/v1beta1
@@ -112,7 +82,7 @@ metadata:
   name: client-empty
   namespace: burn-http
 spec:
-  replicas: 1
+  replicas: 0
   template:
     metadata:
       labels:
@@ -120,25 +90,10 @@ spec:
     spec:
       serviceAccount: client
       containers:
-      - image: buoyantio/bb:v0.0.5
+      - image: buoyantio/slow_cooker:latest
         name: client
-        ports:
-        - name: client
-          containerPort: 9990
-        command:
-        - "/bin/sh"
         args:
-        - "-c"
-        - |
-          set -eu
-          i=0
-          while true ; do
-            for i in $(seq 1000) ; do
-              curl -X GET -m 10 -so /dev/null "http://empty/#$i" &
-              i=$((i+1))
-            done
-            sleep 10
-          done
+        - http://empty/#$i
 
 ---
 apiVersion: extensions/v1beta1
@@ -149,7 +104,7 @@ metadata:
   name: client-unbound
   namespace: burn-http
 spec:
-  replicas: 1
+  replicas: 0
   template:
     metadata:
       labels:
@@ -159,23 +114,8 @@ spec:
       containers:
       - image: buoyantio/bb:v0.0.5
         name: client
-        ports:
-        - name: client
-          containerPort: 9990
-        command:
-        - "/bin/sh"
         args:
-        - "-c"
-        - |
-          set -eu
-          i=0
-          while true ; do
-            for i in $(seq 1000) ; do
-              curl -X GET -m 10 -so /dev/null "http://unbound/#$i" &
-              i=$((i+1))
-            done
-            sleep 10
-          done
+        - http://unbound/#$i
 
 
 #
@@ -191,7 +131,7 @@ metadata:
   name: server
   namespace: burn-http
 spec:
-  replicas: 1
+  replicas: 0
   template:
     metadata:
       labels:
