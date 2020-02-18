@@ -12,7 +12,7 @@ metadata:
   name: burn-http
   annotations:
     config.linkerd.io/proxy-log-level: linkerd=info,warn
-    config.linkerd.io/proxy-version: ver-backpressure-debug-lock-2020-02-11.0
+    config.linkerd.io/proxy-version: ver-stack-metrics-2020-02-18.1
     linkerd.io/inject: enabled
 
 #
@@ -69,8 +69,7 @@ spec:
       - image: buoyantio/slow_cooker:latest
         name: client
         args:
-        - -concurrency
-        - 100
+        - -concurrency=100
         - http://server/
 
 ---
@@ -82,7 +81,7 @@ metadata:
   name: client-empty
   namespace: burn-http
 spec:
-  replicas: 0
+  replicas: 1
   template:
     metadata:
       labels:
@@ -104,7 +103,7 @@ metadata:
   name: client-unbound
   namespace: burn-http
 spec:
-  replicas: 0
+  replicas: 1
   template:
     metadata:
       labels:
@@ -131,7 +130,7 @@ metadata:
   name: server
   namespace: burn-http
 spec:
-  replicas: 0
+  replicas: 1
   template:
     metadata:
       labels:
